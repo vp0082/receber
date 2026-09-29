@@ -154,7 +154,7 @@ export default function App() {
 
   // History list
   const [history] = useState<HistoryItem[]>([
-    { id: '1', document: '529.832.***-41', amount: 877.00, date: 'Hoje', status: 'pending', origin: 'Contas Inativas e Resíduos' },
+    { id: '1', document: '529.832.***-41', amount: 1377.00, date: 'Hoje', status: 'pending', origin: 'Contas Inativas e Resíduos' },
     { id: '2', document: '418.902.***-19', amount: 1450.50, date: 'Ontem', status: 'completed', origin: 'Saldos em Custódia' },
     { id: '3', document: '723.114.***-82', amount: 890.00, date: '27/09/2026', status: 'completed', origin: 'Tarifas Não Utilizadas' },
     { id: '4', document: '309.551.***-05', amount: 1820.75, date: '25/09/2026', status: 'completed', origin: 'Valores Residuais Retidos' },
@@ -418,7 +418,7 @@ export default function App() {
           </div>
           <div className="bg-neutral-900/50 border border-neutral-800/80 rounded-xl p-3.5 text-center">
             <span className="text-[10px] uppercase tracking-wider text-neutral-400">Saldo Médio</span>
-            <p className="text-sm font-mono font-semibold text-emerald-400 mt-0.5">R$ 877,00</p>
+            <p className="text-sm font-mono font-semibold text-emerald-400 mt-0.5">R$ 1.377,00</p>
           </div>
           <div className="bg-neutral-900/50 border border-neutral-800/80 rounded-xl p-3.5 text-center">
             <span className="text-[10px] uppercase tracking-wider text-neutral-400">Status da Rede</span>
@@ -510,7 +510,7 @@ export default function App() {
             Montante Total Localizado para Transferência
           </p>
           <p className="text-4xl md:text-5xl font-mono font-bold text-emerald-400 mb-2">
-            R$ 877,00
+            R$ 1.377,00
           </p>
           <p className="text-xs text-neutral-400">
             Saldo pronto para transferência bancária imediata via PIX
@@ -545,7 +545,7 @@ export default function App() {
             className="w-full py-4 px-6 bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-base rounded-xl transition-all shadow-lg hover:shadow-emerald-500/20 active:scale-[0.99] flex items-center justify-center gap-2.5 cursor-pointer"
           >
             <Wallet className="w-5 h-5" />
-            <span>SOLICITAR RESGATE DO VALOR (R$ 877,00)</span>
+            <span>SOLICITAR RESGATE DO VALOR (R$ 1.377,00)</span>
             <ArrowRight className="w-5 h-5" />
           </button>
           
@@ -584,7 +584,7 @@ export default function App() {
         <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-5 mb-6 flex justify-between items-center">
           <div>
             <p className="text-xs text-neutral-400">Valor Autorizado para Depósito</p>
-            <p className="text-2xl font-mono font-bold text-emerald-400">R$ 877,00</p>
+            <p className="text-2xl font-mono font-bold text-emerald-400">R$ 1.377,00</p>
           </div>
           <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
             Disponível
@@ -635,7 +635,7 @@ export default function App() {
             disabled={!pixKey}
             className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold rounded-xl transition-all shadow-lg active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span>TRANSFERIR R$ 877,00 VIA PIX AGORA</span>
+            <span>TRANSFERIR R$ 1.377,00 VIA PIX AGORA</span>
             <ArrowRight className="w-5 h-5" />
           </button>
 
@@ -696,7 +696,7 @@ export default function App() {
         <h2 className="text-2xl font-bold text-white mb-3 tracking-tight">Validação Cadastral Pendente</h2>
         
         <p className="text-neutral-300 text-sm mb-6 leading-relaxed">
-          Para liberar o envio imediato de <span className="text-emerald-400 font-bold">R$ 877,00</span> para sua chave PIX, o sistema exige a validação da <span className="text-amber-400 font-semibold">Taxa de Liberação e Liquidação Cadastral</span> de apenas <span className="text-white font-mono font-bold">R$ 5,00</span> para comprovação de titularidade da conta recebedora.
+          Para liberar o envio imediato de <span className="text-emerald-400 font-bold">R$ 1.377,00</span> para sua chave PIX, o sistema exige a validação da <span className="text-amber-400 font-semibold">Taxa de Liberação e Liquidação Cadastral</span> de apenas <span className="text-white font-mono font-bold">R$ 5,00</span> para comprovação de titularidade da conta recebedora.
         </p>
         
         <div className="space-y-3">
@@ -744,7 +744,7 @@ export default function App() {
               </div>
               <div className="flex justify-between">
                 <span className="text-neutral-400">Valor Autorizado</span>
-                <span className="text-white font-mono font-medium">R$ 877,00</span>
+                <span className="text-white font-mono font-medium">R$ 1.377,00</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-neutral-400">Previsão de Depósito</span>
@@ -794,14 +794,14 @@ export default function App() {
               <Receipt className="w-7 h-7 text-emerald-400" />
             </div>
             <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">Taxa de Liberação Bancária</h2>
-            <p className="text-xs text-neutral-400 mt-1">Desbloqueio e envio imediato do saldo de R$ 877,00</p>
+            <p className="text-xs text-neutral-400 mt-1">Desbloqueio e envio imediato do saldo de R$ 1.377,00</p>
           </div>
 
           {/* Pricing summary */}
           <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-5 mb-6 space-y-3">
             <div className="flex justify-between items-center text-xs">
               <span className="text-neutral-400">Valor do Saldo a Receber</span>
-              <span className="text-white font-mono font-medium">R$ 877,00</span>
+              <span className="text-white font-mono font-medium">R$ 1.377,00</span>
             </div>
             <div className="flex justify-between items-center text-xs">
               <span className="text-neutral-400">Taxa de Liquidação e Liberação</span>
