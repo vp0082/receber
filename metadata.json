@@ -1,0 +1,5 @@
+{
+  "name": "Remix BTC Mining Simulator",
+  "description": "A high-tech terminal simulation of Bitcoin mining with real-time progress and withdrawal flow.",
+  "requestFramePermissions": []
+}
